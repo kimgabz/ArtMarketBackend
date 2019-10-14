@@ -19,6 +19,27 @@ exports.createStripeCustomer = functions.firestore.document('users/{userId}').on
     return admin.firestore().collection('users').doc(data.id).update({ stripeId : customer.id})
 });
 
+exports.createEphemeralKey = functions.https.onCall(async (data, context) => {
+    const customerId = data.customer_id;
+    const stripeVersion = data.stripe_version;
+    const uid = context.auth.uid
+
+    if (uid === null) {
+        console.log('illegal access attempt due to unauthenticated user');
+        throw new functions.https.HttpsError('permission-denied', ' Illegal access attempt')
+    }
+
+    return stripe.createEphemeralKey.create(
+        {customer: customerId},
+        {stripe_version: stripeVersion}
+    ).then((key) => {
+        return key
+    }).catch((err) => {
+        console.log(err)
+        throw new functions.https.HttpsError('internal', 'Unable to create ephemeral key')
+    })
+});
+
 // exports.helloWorld = functions.https.onRequest((request, response) => {
 //     console.log('console message ArtMarket')
 //     response.send("Hello from KimG ArtMarket!");
